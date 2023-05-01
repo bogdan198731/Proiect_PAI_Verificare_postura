@@ -1,13 +1,13 @@
 #Import the OpenCV library
 import cv2
-import numpy as np;
+import numpy as np
 import traceback
 import winsound
-from scipy import stats;
+from scipy import stats
 
 ############################################################
 
-def draw_rectange_onto_image(img, x, y, width, height, left_right):
+def deseneaza_dreptunghi(img, x, y, width, height, left_right):
     (x,y,w,h) = x, y, width, height;
     rectangle_color = RECTANGLE_COLOR
     if left_right == "left":
@@ -20,7 +20,7 @@ def draw_rectange_onto_image(img, x, y, width, height, left_right):
         rectangle_color,
         2)
     return img
-def draw_lines_onto_image(img, lines, color="GREEN"):
+def deseneaza_linii(img, lines, color="GREEN"):
     # generate start, end for each line
     line_pairs = []
     for index in range(len(lines)):
@@ -32,12 +32,12 @@ def draw_lines_onto_image(img, lines, color="GREEN"):
     # draw each line onto image
     for line_x, line_y in line_pairs:
 
-        img = draw_line_onto_image(img, line_x, line_y, color)
+        img = deseneaza_linie(img, line_x, line_y, color)
 
     # return image
     return img
 
-def draw_line_onto_image(img, line_x, line_y, color="GREEN"):
+def deseneaza_linie(img, line_x, line_y, color="GREEN"):
     x1, x2 = line_x
     xb = int(x2)
     y1, y2 = line_y
@@ -60,36 +60,36 @@ def calculate_max_contrast_pixel(img_gray, x, y, h, top_values_to_consider=3, se
     gradient = np.absolute(gradient) # abs gradient value
     max_indicies = np.argpartition(gradient, -top_values_to_consider)[-top_values_to_consider:] # indicies of the top 5 values
     max_values = gradient[max_indicies]
-    if(max_values.sum() < top_values_to_consider): return None; # return none if no large gradient exists - probably no shoulder in the range
+    if(max_values.sum() < top_values_to_consider):
+        return None # return none if no large gradient exists - probably no shoulder in the range
     weighted_indicies = (max_indicies * max_values)
     weighted_average_index = weighted_indicies.sum() // max_values.sum()
-    #print ("weighted_average_index = " + str(weighted_average_index))
     try:
         index = int(weighted_average_index)
-        index = y + index;
-     #   print("index = " + str(index))
+        index = y + index
     except:
         index = 1
-    return index;
+    return index
 
-def detect_shoulder(img_gray, x, y, width, height, direction, x_scale=0.75, y_scale=0.75):
+def gaseste_umeri(img_gray, x, y, width, height, direction, x_scale=0.75, y_scale=0.75):
     x_face, y_face, w_face, h_face = x, y, width, height # define face components
 
     # define shoulder box componenets
     w = int(x_scale * w_face)
     h = int(y_scale * h_face)
-    y = y_face + h_face * 3//4;# half way down head position
-    if(direction == "right"): x = x_face + w_face - w // 10; # right end of the face box
-    if(direction == "left"): x = x_face - w + w // 10; # w to the left of the start of face box
+    y = y_face + h_face * 3//4 # half way down head position
+    if(direction == "right"): x = x_face + w_face - w // 10 # right end of the face box
+    if(direction == "left"): x = x_face - w + w // 10  # w to the left of the start of face box
     rectangle = (x, y, w, h);
 
     # calculate position of shoulder in each x strip
     x_positions = []
     y_positions = []
     for delta_x in range(w):
-        this_x = x + delta_x;
+        this_x = x + delta_x
         this_y = calculate_max_contrast_pixel(img_gray, this_x, y, h)
-        if(this_y is None): continue; # dont add if no clear best value
+        if(this_y is None):
+            continue # dont add if no clear best value
         x_positions.append(this_x);
         y_positions.append(this_y);
 
@@ -112,7 +112,7 @@ def detect_shoulder(img_gray, x, y, width, height, direction, x_scale=0.75, y_sc
     # return rectangle and positions
     return line, lines, rectangle, value
 
-def get_eyes(img_gray):
+def gaseste_ochi(img_gray):
     eyes = eye_detector.detectMultiScale(img_gray)
     #print("ochii = " + str(eyes))
     return eyes
@@ -120,26 +120,9 @@ def get_eyes(img_gray):
 history_dict = dict({
     "RIGHT" : [],
     "LEFT" : [],
-});
+})
 
-def update_shoulder_history(history_key, new_value, queue_size=5):
-    global history_dict;
-    history = history_dict[history_key];
-    if(len(history) > queue_size-1): history = history[-queue_size-1:]; # last queue_size-1 (e.g., if queue_size is 5 get last 4)
-    history.append(new_value);
-    history_dict[history_key] = history;
-
-def determine_if_shrugging(history_key, new_value, queue_size = 5, threshold = 6):
-    history = (history_dict[history_key]);
-    history.append(new_value);
-    history = np.array(history);
-    if(len(history) < queue_size): return False; # if not enough history to compute, move on
-    stdev = history.std();
-    mean = history.mean();
-    #print(stdev);
-    return stdev > threshold;
-
-def save_posture(left_eye_x, right_eye_x, left_shoulder_x, right_shoulder_x):
+def calculeaza_info_postura(left_eye_x, right_eye_x, left_shoulder_x, right_shoulder_x):
     #print("left_shoulder_x = " + str(left_shoulder_x))
     #print("Acces save posture, left_eye_x " + str(left_eye_x) + " right_eye_x = " + str(right_eye_x))
     #print("left_shoulder_x = " + str(left_shoulder_x) + " right_shoulder_x = " + str(right_shoulder_x))
@@ -161,8 +144,8 @@ def find_and_display(capture):
     #Retrieve the latest image from the webcam
     pos_saved = False
     key_presed = False
-    d_l_es = 0;
-    d_r_es = 0;
+    d_l_es = 0
+    d_r_es = 0
     var_normalizare = 0
     while True:
         rc, img = capture.read()
@@ -209,37 +192,22 @@ def find_and_display(capture):
                 #print("FATAAAAAAAAAAAAAAAAAAAAAAAAAAAAA" + str(face))
                 for (x, y, width, height) in face:
                     #print("test " + str(x)  + ", " + str(y) + ", " + str(width) +  ", " + str(height))
-                    right_shoulder_line, right_shoulder_lines, right_shoulder_rectangle, right_shoulder_value = detect_shoulder(canny, x, y, width, height, "right")
-                    left_shoulder_line, left_shoulder_lines, left_shoulder_rectangle, left_shoulder_value = detect_shoulder(canny, x, y, width, height, "left")
+                    right_shoulder_line, right_shoulder_lines, right_shoulder_rectangle, right_shoulder_value = gaseste_umeri(canny, x, y, width, height, "right")
+                    left_shoulder_line, left_shoulder_lines, left_shoulder_rectangle, left_shoulder_value = gaseste_umeri(canny, x, y, width, height, "left")
 
-                # update shoulder histories and determine if shrugging
-                queue_size = 10;
-                right_shrugging = determine_if_shrugging("RIGHT", right_shoulder_value, queue_size=queue_size);
-                update_shoulder_history("RIGHT", right_shoulder_value, queue_size=queue_size);
 
-                if(right_shrugging):
-                    right_color = "RED";
-                else:
-                    right_color = "GREEN";
-                left_shrugging = determine_if_shrugging("LEFT", left_shoulder_value, queue_size=queue_size);
-                update_shoulder_history("LEFT", left_shoulder_value, queue_size=queue_size);
-                if(left_shrugging):
-                    left_color = "RED";
-                else:
-                    left_color = "GREEN";
-
-                eyes = get_eyes(img_gray)
+                eyes = gaseste_ochi(img_gray)
                 # plot face onto image
-                img = draw_rectange_onto_image(img, x, y, width, height, "head");
+                img = deseneaza_dreptunghi(img, x, y, width, height, "head")
                 x, y, width, height = right_shoulder_rectangle
-                img = draw_rectange_onto_image(img, x, y, width, height, "right");
-                img = draw_lines_onto_image(img, right_shoulder_lines, color="BLUE");
-                img = draw_lines_onto_image(img, right_shoulder_line, color=right_color);
+                img = deseneaza_dreptunghi(img, x, y, width, height, "right")
+                img = deseneaza_linii(img, right_shoulder_lines, color="BLUE")
+                img = deseneaza_linii(img, right_shoulder_line, color="RED")
 
                 x, y, width, height = left_shoulder_rectangle
-                img = draw_rectange_onto_image(img, x, y, width, height,"left");
-                img = draw_lines_onto_image(img, left_shoulder_lines, color="BLUE");
-                img = draw_lines_onto_image(img, left_shoulder_line, color=left_color);
+                img = deseneaza_dreptunghi(img, x, y, width, height, "left")
+                img = deseneaza_linii(img, left_shoulder_lines, color="BLUE")
+                img = deseneaza_linii(img, left_shoulder_line, color="RED")
 
                 eye_left_x = 0
                 eye_right_x = 0
@@ -263,12 +231,12 @@ def find_and_display(capture):
                 if key_presed and len(eyes) == 2 and pos_saved == False :
                     print("eye_left_x = " + str(eye_left_x))
                     print("eye_right_x = " + str(eye_right_x))
-                    d_l_es, d_r_es = save_posture(eye_left_x, eye_right_x, left_shoulder_line, right_shoulder_line)
+                    d_l_es, d_r_es = calculeaza_info_postura(eye_left_x, eye_right_x, left_shoulder_line, right_shoulder_line)
                     pos_saved = True
                     print("Fata salvata, l = " + str(d_l_es) + " r = " + str(d_r_es))
 
                 if pos_saved and len(eyes) == 2:
-                    dt_l_es, dt_r_es = save_posture(eye_left_x, eye_right_x, left_shoulder_line, right_shoulder_line)
+                    dt_l_es, dt_r_es = calculeaza_info_postura(eye_left_x, eye_right_x, left_shoulder_line, right_shoulder_line)
                     #print("Fata noua l = " + str(dt_l_es) + " r = " + str(dt_r_es))
                     toleranta = 15
                     if dt_l_es < d_l_es - toleranta or dt_r_es < d_r_es - toleranta or dt_l_es > d_l_es + toleranta or dt_r_es > d_r_es + toleranta:
@@ -302,8 +270,6 @@ def find_and_display(capture):
 #################
 ## init globals
 #################
-#Initialize a face cascade classifier
-face_cascade_classifier = cv2.CascadeClassifier(cv2.data.haarcascades + "haarcascade_frontalface_default.xml")
 
 # define rectangle colro
 RECTANGLE_COLOR = (0,165,255)
