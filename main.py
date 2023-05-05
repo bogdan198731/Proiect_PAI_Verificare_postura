@@ -1,27 +1,22 @@
-#Import the OpenCV library
 import cv2
 import numpy as np
 import traceback
 import winsound
 from scipy import stats
 
-############################################################
-
+# Deseneaza dreptunghiuri pe imagine
 def deseneaza_dreptunghi(img, x, y, width, height, left_right):
-    (x,y,w,h) = x, y, width, height;
+    (x, y, w, h) = x, y, width, height;
     rectangle_color = RECTANGLE_COLOR
     if left_right == "left":
         rectangle_color = (125, 245, 130)
 
-    cv2.rectangle(
-        img,
-        (x-10, y-20),
-        (x + w+10, y + h+20),
-        rectangle_color,
-        2)
+    cv2.rectangle(img, (x-10, y-20), (x + w+10, y + h+20), rectangle_color, 2)
     return img
+
+# Deseneaza lini pe imagine cu ajutorul functiei deseneaza_linie
 def deseneaza_linii(img, lines, color="GREEN"):
-    # generate start, end for each line
+    #creaza punctele de start si stop pt fiecare linie
     line_pairs = []
     for index in range(len(lines)):
         if(index > 0):
@@ -29,14 +24,12 @@ def deseneaza_linii(img, lines, color="GREEN"):
             end = lines[index]
             line_pairs.append((start, end))
 
-    # draw each line onto image
+    # Deseneaza fiecare linie
     for line_x, line_y in line_pairs:
-
         img = deseneaza_linie(img, line_x, line_y, color)
-
-    # return image
     return img
 
+# Deseneaza limie pe imagine
 def deseneaza_linie(img, line_x, line_y, color="GREEN"):
     x1, x2 = line_x
     xb = int(x2)
@@ -49,6 +42,7 @@ def deseneaza_linie(img, line_x, line_y, color="GREEN"):
     cv2.line(img, (x1, xb), (y1, yb), color, 2)
     return img
 
+# Functie folosita pt gasirea marginilor unui obiect, in cazul nostru umeri
 def calculate_max_contrast_pixel(img_gray, x, y, h, top_values_to_consider=3, search_width = 10):
     a = int(y+h)
     y1 = int(y)
@@ -94,7 +88,6 @@ def gaseste_umeri(img_gray, x, y, width, height, direction, x_scale=0.75, y_scal
         y_positions.append(this_y);
 
     # extract line from positions
-    #line = [(x_positions[5], y_positions[5]), (x_positions[-10], y_positions[-10])];
     lines = [];
     for index in range(len(x_positions)):
         lines.append((x_positions[index], y_positions[index]))
@@ -106,15 +99,15 @@ def gaseste_umeri(img_gray, x, y, width, height, direction, x_scale=0.75, y_scal
     line = [(x_positions[0], line_y0), (x_positions[-1], line_y1)]
 
     # decide on value
-    #value = intercept;
     value = np.array([line[0][1], line[1][1]]).mean()
 
     # return rectangle and positions
     return line, lines, rectangle, value
 
+# Detecteaza ochii
 def gaseste_ochi(img_gray):
     eyes = eye_detector.detectMultiScale(img_gray)
-    #print("ochii = " + str(eyes))
+
     return eyes
 
 history_dict = dict({
@@ -122,6 +115,7 @@ history_dict = dict({
     "LEFT" : [],
 })
 
+# Calculeaza distanta dintre ochi si umeri
 def calculeaza_info_postura(left_eye_x, right_eye_x, left_shoulder_x, right_shoulder_x):
     #print("left_shoulder_x = " + str(left_shoulder_x))
     #print("Acces save posture, left_eye_x " + str(left_eye_x) + " right_eye_x = " + str(right_eye_x))
@@ -140,8 +134,9 @@ def calculeaza_info_postura(left_eye_x, right_eye_x, left_shoulder_x, right_shou
     dist_r_e_s = r_ex - r_sx // 2
     return dist_l_e_s, -dist_r_e_s
 
-def find_and_display(capture):
-    #Retrieve the latest image from the webcam
+# Prelucrarea si afisarea imaginilor
+def prelucrare_afisare_imagini(capture):
+    # Variabile utilizate pt calculul posturii
     pos_saved = False
     key_presed = False
     d_l_es = 0
@@ -155,6 +150,7 @@ def find_and_display(capture):
         if key == 27:
             break
 
+        # Dupa apasarea tastei spatiu salvam pozitia standard de stat la birou
         if key == 32:
             key_presed = True
             pos_saved = False
@@ -183,11 +179,10 @@ def find_and_display(capture):
         #cv2.imshow('webcam_feed2', img_gray)
 
         try:
-            # extract the face
-            #face_detector = cv2.CascadeClassifier(cv2.data.haarcascades + "haarcascade_frontalface_default.xml")
+            # Detectare fata
             face = face_detector.detectMultiScale(img_gray, 1.3, 5)
 
-            # detect shoulders
+            # Detectare umeri
             if len(face):
                 #print("FATAAAAAAAAAAAAAAAAAAAAAAAAAAAAA" + str(face))
                 for (x, y, width, height) in face:
@@ -195,9 +190,10 @@ def find_and_display(capture):
                     right_shoulder_line, right_shoulder_lines, right_shoulder_rectangle, right_shoulder_value = gaseste_umeri(canny, x, y, width, height, "right")
                     left_shoulder_line, left_shoulder_lines, left_shoulder_rectangle, left_shoulder_value = gaseste_umeri(canny, x, y, width, height, "left")
 
-
+                # Detectare ochi
                 eyes = gaseste_ochi(img_gray)
-                # plot face onto image
+                # Desenam dreptunghiuri si linii peste imagine pt a
+                # identifica mai bine punctele de interes (cap, ochi si umeri)
                 img = deseneaza_dreptunghi(img, x, y, width, height, "head")
                 x, y, width, height = right_shoulder_rectangle
                 img = deseneaza_dreptunghi(img, x, y, width, height, "right")
@@ -209,10 +205,12 @@ def find_and_display(capture):
                 img = deseneaza_linii(img, left_shoulder_lines, color="BLUE")
                 img = deseneaza_linii(img, left_shoulder_line, color="RED")
 
+                # variabile folosite pt a calcula distanta normala dintre ochi si umeri
                 eye_left_x = 0
                 eye_right_x = 0
                 shoulder_left_x = 0
                 shoulder_right_x = 0
+                # Calculam distanta doar daca in imagine au fost gasiti ambii ochi
                 if len(eyes) == 2:
                     k = 0
                     for (ex, ey, ew, eh) in eyes:
@@ -223,11 +221,13 @@ def find_and_display(capture):
                             k = k + 1
                         if k == 1:
                             eye_right_x = ex
-
+                # testam ca valorile pt ochiul stang si drept sa fie bine alimentate
                 if eye_left_x > eye_right_x:
                     r = eye_right_x
                     eye_right_x = eye_left_x
                     eye_left_x = r
+                # Calculam distanta normala dintr ochi si umeri,
+                # aceasta este calculata dupa apasarea tastei spatiu
                 if key_presed and len(eyes) == 2 and pos_saved == False :
                     print("eye_left_x = " + str(eye_left_x))
                     print("eye_right_x = " + str(eye_right_x))
@@ -235,12 +235,21 @@ def find_and_display(capture):
                     pos_saved = True
                     print("Fata salvata, l = " + str(d_l_es) + " r = " + str(d_r_es))
 
+                # Testem ca postura sa fie ok
                 if pos_saved and len(eyes) == 2:
                     dt_l_es, dt_r_es = calculeaza_info_postura(eye_left_x, eye_right_x, left_shoulder_line, right_shoulder_line)
                     #print("Fata noua l = " + str(dt_l_es) + " r = " + str(dt_r_es))
+                    # Toleranta este o variabila utilizata pt a compensa unor mici miscari
+                    # care nu influenteaza postura sau posibilitatea ca utilizatorul sa se apropie
+                    # sau departeze de camera
                     toleranta = 15
+                    # Verificare daca pozitia este corecta
                     if dt_l_es < d_l_es - toleranta or dt_r_es < d_r_es - toleranta or dt_l_es > d_l_es + toleranta or dt_r_es > d_r_es + toleranta:
+                        # folosim variabila var_normalizare pt a elimina posibilitatea ca
+                        # in cazul unei identificari gresite a unui ochi sau umar sa avem un sunet
+                        # de avertizare
                         if var_normalizare > 3:
+                            # Afisaj plus sunet eroare
                             print("PROBLEM  Stai Drept")
                             winsound.Beep(440, 500)
                             print("Fata noua l = " + str(dt_l_es) + " r = " + str(dt_r_es))
@@ -252,35 +261,26 @@ def find_and_display(capture):
             print(e);
             print('Nuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuu')
             print(traceback.format_exc())
-            #print("face not found!");
-            img = img;
+            img = img
 
         # draw the face
         cv2.imshow('webcam_feed', img)
     print("Fata salvata finis, l = " + str(d_l_es) + " r = " + str(d_r_es))
-        # record frame
-        # print(img.shape)
-        # img = np.random.randint(255, size=img.shape).astype('uint8')
 
 
-        # wait so that image has time to draw
-        #cv2.waitKey(50) # wait for up to N milliseconds
+# Definire culoare standard
+RECTANGLE_COLOR = (0, 165, 255)
 
-
-#################
-## init globals
-#################
-
-# define rectangle colro
-RECTANGLE_COLOR = (0,165,255)
-
-#Open the first video device
+#Preluare imagine de la camera
 capture = cv2.VideoCapture(0)
-frame_width = int( capture.get(cv2.CAP_PROP_FRAME_WIDTH))
-frame_height = int( capture.get( cv2.CAP_PROP_FRAME_HEIGHT))
+#Preluare lungime/latime cadru pt afisare
+frame_width = int(capture.get(cv2.CAP_PROP_FRAME_WIDTH))
+frame_height = int(capture.get(cv2.CAP_PROP_FRAME_HEIGHT))
 print(frame_height, frame_width);
+
+#creare
 face_detector = cv2.CascadeClassifier(cv2.data.haarcascades + "haarcascade_frontalface_default.xml")
 #face_detector = cv2.CascadeClassifier(cv2.data.haarcascades + "haarcascade_profileface.xml")
 eye_detector = cv2.CascadeClassifier(cv2.data.haarcascades + "haarcascade_eye_tree_eyeglasses.xml")
 #eye_detector = cv2.CascadeClassifier(cv2.data.haarcascades + "haarcascade_eye.xml")
-find_and_display(capture);
+prelucrare_afisare_imagini(capture);
