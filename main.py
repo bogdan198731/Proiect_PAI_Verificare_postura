@@ -2,9 +2,7 @@ import cv2
 import numpy as np
 import traceback
 import winsound
-from playsound import playsound
 from scipy import stats
-import time
 
 # Deseneaza dreptunghiuri pe imagine
 def deseneaza_dreptunghi(img, x, y, width, height, left_right):
@@ -167,15 +165,16 @@ def prelucrare_afisare_imagini(capture):
         #noiseless_image_colored = cv2.fastNlMeansDenoisingColored(img, None, 10, 20, 4, 10)
         #cv2.imshow('webcam_feed2', noiseless_image_colored)
 
-        # detection expects grayscale image, convert to grayscale to run basic algorithm of detecting shoulder
-        img_gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-        img_grayf = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+        # Utilizam medianBlur pt a avea o mai buna calitate a imaginii
+        median = cv2.medianBlur(img, 7)
+
+        # Conversie la grayscale
+        img_gray = cv2.cvtColor(median, cv2.COLOR_BGR2GRAY)
+        img_grayf = cv2.cvtColor(median, cv2.COLOR_BGR2GRAY)
         img_gray = cv2.equalizeHist(img_gray)
-        # Variabila utilizata pt a ajusta Threshold
-        t = 40
 
         # Threshold
-        _, thresh = cv2.threshold(img_gray, t, 255, cv2.THRESH_BINARY_INV)
+        _, thresh = cv2.threshold(img_gray, T, 255, cv2.THRESH_BINARY_INV)
         # Canny Edge detection
         canny = cv2.Canny(thresh, 0, 100)
         if TEST:
@@ -184,6 +183,8 @@ def prelucrare_afisare_imagini(capture):
             cv2.imshow("thresh", thresh)
         if TEST:
             cv2.imshow("canny", canny)
+        if TEST:
+            cv2.imshow("median", median)
 
 
         #cv2.imshow('webcam_feed2', img_gray)
@@ -281,7 +282,7 @@ def prelucrare_afisare_imagini(capture):
                             # de avertizare
                             if var_normalizare > 3:
                                 # Afisaj plus sunet eroare
-                                print("PROBLEM  Stai Drept")
+                                print("PROBLEM  Stai Corect")
                                 winsound.Beep(440, 500)
                                 print("Fata noua l = " + str(dt_l_es) + " r = " + str(dt_r_es))
                                 var_normalizare = 0
@@ -289,7 +290,7 @@ def prelucrare_afisare_imagini(capture):
                                 img = deseneaza_linii(img, left_shoulder_line, color="RED")
                                 img_ko = img.copy()
                                 img_test = cv2.addWeighted(img_ok, 0.6, img_ko, 0.4, 0.0)
-                                cv2.putText(img_test, 'Stai Drept', (x + 170, y + 70), fontScale=3,
+                                cv2.putText(img_test, 'Stai Corect', (x + 170, y + 70), fontScale=3,
                                             fontFace=cv2.FONT_HERSHEY_PLAIN, color=(0, 0, 255),
                                             thickness=3)
                                 cv2.imshow('test_img', img_test)
@@ -310,6 +311,11 @@ def prelucrare_afisare_imagini(capture):
         # draw the face
         if TEST or pos_saved == False:
             cv2.imshow('webcam_feed', img)
+            if not problema:
+                try:
+                    cv2.destroyWindow('test_img')
+                except:
+                    continue
         else:
             if not problema:
                 cv2.destroyAllWindows()
@@ -319,10 +325,14 @@ def prelucrare_afisare_imagini(capture):
 # Definire culoare standard
 RECTANGLE_COLOR = (0, 165, 255)
 # Variabila globala pt a stii daca facem un test sau suntem in mod "productie"
-TEST = False
+TEST = True
 # Variabila globala care ne permite alegem numarul de frame-uri pentru care
 # imaginea compusa din postura ok si postura ko ramane pe ecran
 ASTEPT = 30
+
+# Variabila utilizata pt a ajusta Threshold, se ajusteaza in functie de luminozitatea
+# mediului inconjurator, cu cat este mai lumina cu atat T trebuie sa fie ma mare
+T = 20
 
 #Preluare imagine de la camera
 capture = cv2.VideoCapture(0)
