@@ -8,7 +8,7 @@ from scipy import stats
 def deseneaza_dreptunghi(img, x, y, width, height, left_right):
     (x, y, w, h) = x, y, width, height;
     rectangle_color = RECTANGLE_COLOR
-    if left_right == "left":
+    if left_right == "head":
         rectangle_color = (125, 245, 130)
 
     cv2.rectangle(img, (x-10, y-20), (x + w+10, y + h+20), rectangle_color, 2)
@@ -163,6 +163,7 @@ def prelucrare_afisare_imagini(capture):
 
         # detection expects grayscale image, convert to grayscale to run basic algorithm of detecting shoulder
         img_gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+        img_grayf = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
         img_gray = cv2.equalizeHist(img_gray)
         t = 130  # threshold: tune this number to your needs
 
@@ -170,10 +171,12 @@ def prelucrare_afisare_imagini(capture):
         ret, thresh = cv2.threshold(img_gray, t, 255, cv2.THRESH_BINARY_INV)
         # kernel = np.ones((9,9),np.uint8)
         # thresh = cv2.morphologyEx(thresh, cv2.MORPH_OPEN, kernel)
-        cv2.imshow("thresh", thresh)
+        if TEST:
+            cv2.imshow("thresh", thresh)
         # Canny Edge detection
         canny = cv2.Canny(thresh, 0, 100)
-        cv2.imshow("canny", canny)
+        if TEST:
+            cv2.imshow("canny", canny)
 
 
         #cv2.imshow('webcam_feed2', img_gray)
@@ -182,19 +185,28 @@ def prelucrare_afisare_imagini(capture):
             # Detectare fata
             face = face_detector.detectMultiScale(img_gray, 1.3, 5)
 
+
             # Detectare umeri
             if len(face):
                 #print("FATAAAAAAAAAAAAAAAAAAAAAAAAAAAAA" + str(face))
                 for (x, y, width, height) in face:
+
                     #print("test " + str(x)  + ", " + str(y) + ", " + str(width) +  ", " + str(height))
                     right_shoulder_line, right_shoulder_lines, right_shoulder_rectangle, right_shoulder_value = gaseste_umeri(canny, x, y, width, height, "right")
                     left_shoulder_line, left_shoulder_lines, left_shoulder_rectangle, left_shoulder_value = gaseste_umeri(canny, x, y, width, height, "left")
 
+
                 # Detectare ochi
                 eyes = gaseste_ochi(img_gray)
+
                 # Desenam dreptunghiuri si linii peste imagine pt a
                 # identifica mai bine punctele de interes (cap, ochi si umeri)
                 img = deseneaza_dreptunghi(img, x, y, width, height, "head")
+                #cv2.rectangle(img, (x - 10, y - 20), (x + w + 10, y + h + 20), rectangle_color, 2)
+                fata = img_grayf[y : y + width, x: x + height]
+                fata2 = img[y: y + width, x: x + height]
+                #cv2.imshow('zambet1', fata)
+                smile = smile_detector.detectMultiScale(fata, 1.3, 5)
                 x, y, width, height = right_shoulder_rectangle
                 img = deseneaza_dreptunghi(img, x, y, width, height, "right")
                 img = deseneaza_linii(img, right_shoulder_lines, color="BLUE")
@@ -204,6 +216,10 @@ def prelucrare_afisare_imagini(capture):
                 img = deseneaza_dreptunghi(img, x, y, width, height, "left")
                 img = deseneaza_linii(img, left_shoulder_lines, color="BLUE")
                 img = deseneaza_linii(img, left_shoulder_line, color="RED")
+
+                for (ex, ey, ew, eh) in smile:
+                        cv2.rectangle(fata2, (ex, ey), (ex + ew, ey + eh), (100, 100, 255), 3)
+                #cv2.imshow('zambet1', fata2)
 
                 # variabile folosite pt a calcula distanta normala dintre ochi si umeri
                 eye_left_x = 0
@@ -264,12 +280,16 @@ def prelucrare_afisare_imagini(capture):
             img = img
 
         # draw the face
-        cv2.imshow('webcam_feed', img)
+        if TEST or pos_saved == False:
+            cv2.imshow('webcam_feed', img)
+        else:
+            cv2.destroyAllWindows()
     print("Fata salvata finis, l = " + str(d_l_es) + " r = " + str(d_r_es))
 
 
 # Definire culoare standard
 RECTANGLE_COLOR = (0, 165, 255)
+TEST = True
 
 #Preluare imagine de la camera
 capture = cv2.VideoCapture(0)
@@ -283,4 +303,5 @@ face_detector = cv2.CascadeClassifier(cv2.data.haarcascades + "haarcascade_front
 #face_detector = cv2.CascadeClassifier(cv2.data.haarcascades + "haarcascade_profileface.xml")
 eye_detector = cv2.CascadeClassifier(cv2.data.haarcascades + "haarcascade_eye_tree_eyeglasses.xml")
 #eye_detector = cv2.CascadeClassifier(cv2.data.haarcascades + "haarcascade_eye.xml")
-prelucrare_afisare_imagini(capture);
+smile_detector = cv2.CascadeClassifier(cv2.data.haarcascades + "haarcascade_smile.xml")
+prelucrare_afisare_imagini(capture)
