@@ -2,7 +2,9 @@ import cv2
 import numpy as np
 import traceback
 import winsound
+from playsound import playsound
 from scipy import stats
+import time
 
 # Deseneaza dreptunghiuri pe imagine
 def deseneaza_dreptunghi(img, x, y, width, height, left_right):
@@ -165,12 +167,15 @@ def prelucrare_afisare_imagini(capture):
         img_gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
         img_grayf = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
         img_gray = cv2.equalizeHist(img_gray)
-        t = 130  # threshold: tune this number to your needs
+        # Variabila utilizata pt a ajusta Threshold
+        t = 80
 
         # Threshold
-        ret, thresh = cv2.threshold(img_gray, t, 255, cv2.THRESH_BINARY_INV)
+        _, thresh = cv2.threshold(img_gray, t, 255, cv2.THRESH_BINARY_INV)
         # kernel = np.ones((9,9),np.uint8)
-        # thresh = cv2.morphologyEx(thresh, cv2.MORPH_OPEN, kernel)
+        # thresh = cv2.morphologyEx
+        if TEST:
+            cv2.imshow("img_gray", img_gray)
         if TEST:
             cv2.imshow("thresh", thresh)
         # Canny Edge detection
@@ -185,9 +190,9 @@ def prelucrare_afisare_imagini(capture):
             # Detectare fata
             face = face_detector.detectMultiScale(img_gray, 1.3, 5)
 
-
             # Detectare umeri
             if len(face):
+
                 #print("FATAAAAAAAAAAAAAAAAAAAAAAAAAAAAA" + str(face))
                 for (x, y, width, height) in face:
 
@@ -196,8 +201,7 @@ def prelucrare_afisare_imagini(capture):
                     left_shoulder_line, left_shoulder_lines, left_shoulder_rectangle, left_shoulder_value = gaseste_umeri(canny, x, y, width, height, "left")
 
 
-                # Detectare ochi
-                eyes = gaseste_ochi(img_gray)
+
 
                 # Desenam dreptunghiuri si linii peste imagine pt a
                 # identifica mai bine punctele de interes (cap, ochi si umeri)
@@ -205,8 +209,10 @@ def prelucrare_afisare_imagini(capture):
                 #cv2.rectangle(img, (x - 10, y - 20), (x + w + 10, y + h + 20), rectangle_color, 2)
                 fata = img_grayf[y : y + width, x: x + height]
                 fata2 = img[y: y + width, x: x + height]
+                # Detectare ochi
+                eyes = gaseste_ochi(img_grayf)
                 #cv2.imshow('zambet1', fata)
-                smile = smile_detector.detectMultiScale(fata, 1.3, 5)
+                smile = smile_detector.detectMultiScale(fata, scaleFactor=1.7, minNeighbors=35)
                 x, y, width, height = right_shoulder_rectangle
                 img = deseneaza_dreptunghi(img, x, y, width, height, "right")
                 img = deseneaza_linii(img, right_shoulder_lines, color="BLUE")
@@ -217,7 +223,11 @@ def prelucrare_afisare_imagini(capture):
                 img = deseneaza_linii(img, left_shoulder_lines, color="BLUE")
                 img = deseneaza_linii(img, left_shoulder_line, color="RED")
 
-                for (ex, ey, ew, eh) in smile:
+                if len(smile):
+                    #playsound('test.wav')
+                    #time.sleep(2)
+                    winsound.PlaySound('test.wav', winsound.SND_FILENAME | winsound.SND_NOWAIT)
+                    for (ex, ey, ew, eh) in smile:
                         cv2.rectangle(fata2, (ex, ey), (ex + ew, ey + eh), (100, 100, 255), 3)
                 #cv2.imshow('zambet1', fata2)
 
