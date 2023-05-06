@@ -144,6 +144,10 @@ def prelucrare_afisare_imagini(capture):
     d_l_es = 0
     d_r_es = 0
     var_normalizare = 0
+    _, img_ok = capture.read()
+    img_ko = img_ok
+    problema = False
+    contor = 0
     while True:
         rc, img = capture.read()
 
@@ -168,18 +172,16 @@ def prelucrare_afisare_imagini(capture):
         img_grayf = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
         img_gray = cv2.equalizeHist(img_gray)
         # Variabila utilizata pt a ajusta Threshold
-        t = 80
+        t = 40
 
         # Threshold
         _, thresh = cv2.threshold(img_gray, t, 255, cv2.THRESH_BINARY_INV)
-        # kernel = np.ones((9,9),np.uint8)
-        # thresh = cv2.morphologyEx
+        # Canny Edge detection
+        canny = cv2.Canny(thresh, 0, 100)
         if TEST:
             cv2.imshow("img_gray", img_gray)
         if TEST:
             cv2.imshow("thresh", thresh)
-        # Canny Edge detection
-        canny = cv2.Canny(thresh, 0, 100)
         if TEST:
             cv2.imshow("canny", canny)
 
@@ -216,17 +218,16 @@ def prelucrare_afisare_imagini(capture):
                 x, y, width, height = right_shoulder_rectangle
                 img = deseneaza_dreptunghi(img, x, y, width, height, "right")
                 img = deseneaza_linii(img, right_shoulder_lines, color="BLUE")
-                img = deseneaza_linii(img, right_shoulder_line, color="RED")
 
                 x, y, width, height = left_shoulder_rectangle
                 img = deseneaza_dreptunghi(img, x, y, width, height, "left")
                 img = deseneaza_linii(img, left_shoulder_lines, color="BLUE")
-                img = deseneaza_linii(img, left_shoulder_line, color="RED")
+
+                img = deseneaza_linii(img, right_shoulder_line, color="GREEN")
+                img = deseneaza_linii(img, left_shoulder_line, color="GREEN")
 
                 if len(smile):
-                    #playsound('test.wav')
-                    #time.sleep(2)
-                    winsound.PlaySound('test.wav', winsound.SND_FILENAME | winsound.SND_NOWAIT)
+                    #winsound.PlaySound('test.wav', winsound.SND_FILENAME | winsound.SND_NOWAIT)
                     for (ex, ey, ew, eh) in smile:
                         cv2.rectangle(fata2, (ex, ey), (ex + ew, ey + eh), (100, 100, 255), 3)
                 #cv2.imshow('zambet1', fata2)
@@ -252,7 +253,7 @@ def prelucrare_afisare_imagini(capture):
                     r = eye_right_x
                     eye_right_x = eye_left_x
                     eye_left_x = r
-                # Calculam distanta normala dintr ochi si umeri,
+                # Calculam distanta normala dintre ochi si umeri,
                 # aceasta este calculata dupa apasarea tastei spatiu
                 if key_presed and len(eyes) == 2 and pos_saved == False :
                     print("eye_left_x = " + str(eye_left_x))
@@ -260,29 +261,46 @@ def prelucrare_afisare_imagini(capture):
                     d_l_es, d_r_es = calculeaza_info_postura(eye_left_x, eye_right_x, left_shoulder_line, right_shoulder_line)
                     pos_saved = True
                     print("Fata salvata, l = " + str(d_l_es) + " r = " + str(d_r_es))
+                    img = deseneaza_linii(img, right_shoulder_line, color="GREEN")
+                    img = deseneaza_linii(img, left_shoulder_line, color="GREEN")
+                    img_ok = img.copy()
 
                 # Testem ca postura sa fie ok
-                if pos_saved and len(eyes) == 2:
-                    dt_l_es, dt_r_es = calculeaza_info_postura(eye_left_x, eye_right_x, left_shoulder_line, right_shoulder_line)
-                    #print("Fata noua l = " + str(dt_l_es) + " r = " + str(dt_r_es))
-                    # Toleranta este o variabila utilizata pt a compensa unor mici miscari
-                    # care nu influenteaza postura sau posibilitatea ca utilizatorul sa se apropie
-                    # sau departeze de camera
-                    toleranta = 15
-                    # Verificare daca pozitia este corecta
-                    if dt_l_es < d_l_es - toleranta or dt_r_es < d_r_es - toleranta or dt_l_es > d_l_es + toleranta or dt_r_es > d_r_es + toleranta:
-                        # folosim variabila var_normalizare pt a elimina posibilitatea ca
-                        # in cazul unei identificari gresite a unui ochi sau umar sa avem un sunet
-                        # de avertizare
-                        if var_normalizare > 3:
-                            # Afisaj plus sunet eroare
-                            print("PROBLEM  Stai Drept")
-                            winsound.Beep(440, 500)
-                            print("Fata noua l = " + str(dt_l_es) + " r = " + str(dt_r_es))
-                            var_normalizare = 0
-                        else:
-                            var_normalizare = var_normalizare + 1
-
+                if not problema:
+                    if pos_saved and len(eyes) == 2:
+                        dt_l_es, dt_r_es = calculeaza_info_postura(eye_left_x, eye_right_x, left_shoulder_line, right_shoulder_line)
+                        #print("Fata noua l = " + str(dt_l_es) + " r = " + str(dt_r_es))
+                        # Toleranta este o variabila utilizata pt a compensa unor mici miscari
+                        # care nu influenteaza postura sau posibilitatea ca utilizatorul sa se apropie
+                        # sau departeze de camera
+                        toleranta = 15
+                        # Verificare daca pozitia este corecta
+                        if dt_l_es < d_l_es - toleranta or dt_r_es < d_r_es - toleranta or dt_l_es > d_l_es + toleranta or dt_r_es > d_r_es + toleranta:
+                            # folosim variabila var_normalizare pt a elimina posibilitatea ca
+                            # in cazul unei identificari gresite a unui ochi sau umar sa avem un sunet
+                            # de avertizare
+                            if var_normalizare > 3:
+                                # Afisaj plus sunet eroare
+                                print("PROBLEM  Stai Drept")
+                                winsound.Beep(440, 500)
+                                print("Fata noua l = " + str(dt_l_es) + " r = " + str(dt_r_es))
+                                var_normalizare = 0
+                                img = deseneaza_linii(img, right_shoulder_line, color="RED")
+                                img = deseneaza_linii(img, left_shoulder_line, color="RED")
+                                img_ko = img.copy()
+                                img_test = cv2.addWeighted(img_ok, 0.6, img_ko, 0.4, 0.0)
+                                cv2.putText(img_test, 'Stai Drept', (x + 170, y + 70), fontScale=3,
+                                            fontFace=cv2.FONT_HERSHEY_PLAIN, color=(0, 0, 255),
+                                            thickness=3)
+                                cv2.imshow('test_img', img_test)
+                                problema = True
+                            else:
+                                var_normalizare = var_normalizare + 1
+                else:
+                    contor = contor + 1
+                    if contor > ASTEPT:
+                        problema = False
+                        contor = 0
         except Exception as e:
             print(e);
             print('Nuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuu')
@@ -293,13 +311,18 @@ def prelucrare_afisare_imagini(capture):
         if TEST or pos_saved == False:
             cv2.imshow('webcam_feed', img)
         else:
-            cv2.destroyAllWindows()
+            if not problema:
+                cv2.destroyAllWindows()
     print("Fata salvata finis, l = " + str(d_l_es) + " r = " + str(d_r_es))
 
 
 # Definire culoare standard
 RECTANGLE_COLOR = (0, 165, 255)
-TEST = True
+# Variabila globala pt a stii daca facem un test sau suntem in mod "productie"
+TEST = False
+# Variabila globala care ne permite alegem numarul de frame-uri pentru care
+# imaginea compusa din postura ok si postura ko ramane pe ecran
+ASTEPT = 30
 
 #Preluare imagine de la camera
 capture = cv2.VideoCapture(0)
