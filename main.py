@@ -228,7 +228,8 @@ def prelucrare_afisare_imagini(capture):
                 img = deseneaza_linii(img, left_shoulder_line, color="GREEN")
 
                 if len(smile):
-                    #winsound.PlaySound('test.wav', winsound.SND_FILENAME | winsound.SND_NOWAIT)
+                    if RAS:
+                        winsound.PlaySound('test.wav', winsound.SND_FILENAME | winsound.SND_NOWAIT)
                     for (ex, ey, ew, eh) in smile:
                         cv2.rectangle(fata2, (ex, ey), (ex + ew, ey + eh), (100, 100, 255), 3)
                 #cv2.imshow('zambet1', fata2)
@@ -332,7 +333,9 @@ ASTEPT = 30
 
 # Variabila utilizata pt a ajusta Threshold, se ajusteaza in functie de luminozitatea
 # mediului inconjurator, cu cat este mai lumina cu atat T trebuie sa fie ma mare
-T = 20
+T = 120
+#
+RAS = True
 
 #Preluare imagine de la camera
 capture = cv2.VideoCapture(0)
