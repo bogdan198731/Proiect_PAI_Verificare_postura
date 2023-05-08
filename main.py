@@ -146,6 +146,10 @@ def prelucrare_afisare_imagini(capture):
     img_ko = img_ok
     problema = False
     contor = 0
+    contor_zambet = 0
+    zambet = False
+
+    zx, zy, zw, zh = 0, 0, 0, 0
     while True:
         rc, img = capture.read()
 
@@ -230,8 +234,20 @@ def prelucrare_afisare_imagini(capture):
                 if len(smile):
                     if RAS:
                         winsound.PlaySound('test.wav', winsound.SND_FILENAME | winsound.SND_NOWAIT)
+                        print("RAS")
                     for (ex, ey, ew, eh) in smile:
                         cv2.rectangle(fata2, (ex, ey), (ex + ew, ey + eh), (100, 100, 255), 3)
+                        zx, zy, zw, zh = ex, ey, ew, eh
+                    zambet = True
+                else:
+                    if contor_zambet < ZAMBET and zambet:
+                        cv2.rectangle(fata2, (zx, zy), (zx + zw, zy + zh), (100, 100, 255), 3)
+
+                        contor_zambet = contor_zambet + 1
+                    else:
+                        if contor_zambet > ZAMBET or contor_zambet == ZAMBET:
+                            zambet = False
+                            contor_zambet = 0
                 #cv2.imshow('zambet1', fata2)
 
                 # variabile folosite pt a calcula distanta normala dintre ochi si umeri
@@ -305,9 +321,10 @@ def prelucrare_afisare_imagini(capture):
                         contor = 0
         except Exception as e:
             print(e);
-            print('Nuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuu')
-            print(traceback.format_exc())
-            img = img
+            if TEST:
+                print('Nuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuu')
+                print(traceback.format_exc())
+                #img = img
 
         # draw the face
         if TEST or pos_saved == False:
@@ -336,6 +353,7 @@ ASTEPT = 30
 T = 120
 #
 RAS = True
+ZAMBET = 5
 
 #Preluare imagine de la camera
 capture = cv2.VideoCapture(0)
